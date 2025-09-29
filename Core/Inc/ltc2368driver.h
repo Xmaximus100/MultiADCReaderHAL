@@ -41,7 +41,8 @@ typedef struct LTC2368_Handler {
 	GPIO_Assignment *busy_pin;
 	uint16_t buf[LTC2368_MAX_MEMORY];
 	uint16_t buf_ptr;
-	uint16_t samples_requested;
+	uint16_t *samples_requested;
+	uint16_t *ready_to_disp;
 } LTC2368_Handler;
 
 typedef struct LTC2368_SamplingClock {

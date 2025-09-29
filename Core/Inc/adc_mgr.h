@@ -19,6 +19,8 @@
 #define MAX_DEVICES 12
 #define SPI_AMOUNT 2
 #define MAX_EXTI 16
+#define REFRENCE_V	2500 	//reference voltage in mV
+#define RESOLUTION_BITS	32768
 
 /*
  * ADC_MGR is responsible for handling multiple ltc2368, assigning proper SPI instances
@@ -33,19 +35,24 @@ typedef struct {
 	SPI_Assignment spi_available[SPI_AMOUNT];	//spi available on board
 	uint8_t exti_to_dev[MAX_EXTI];				//pin to ID list
 	uint8_t ndevs;								//connected devices
+	uint16_t ready_to_disp;						//ready to display status for each connected device 1-ready, 0-still collecting
+	uint16_t ready_to_disp_mask;				//mask for ready to display check
 	uint8_t format; 							//display format 0-raw, 1-readable
 	uint32_t refresh_interval; 					//display periods
 	uint32_t display_samples; 					//samples to display at once
+	uint16_t samples_requested;					//samples requested to collected, common for each device
+	AT_CtxT display_func;						//function for displaying data
 	bool state; 								//adc on/off
 } ADC_Handler;
 
-bool ADC_Init(ADC_Handler *m, TIM_HandleTypeDef *tim_master, uint32_t tim_master_ch, SPI_HandleTypeDef *spi_handlers[], const GPIO_Assignment busy_pins[]);
+bool ADC_Init(ADC_Handler *m, TIM_HandleTypeDef *tim_master, uint32_t tim_master_ch, SPI_HandleTypeDef *spi_handlers[], const GPIO_Assignment busy_pins[], AT_WriteFunc func, void *user);
 bool ADC_ManagerInit(ADC_Handler *m, uint8_t dev_amount);
 void ADC_Acquire(ADC_Handler *m);
 bool ADC_StartSampling(void);
 bool ADC_StopSampling(void);
 void ADC_MarkReady(ADC_Handler *m, uint8_t id);
 uint8_t ADC_PinToIndex(uint16_t GPIO_Pin);
+bool ADC_DisplaySamples_Clear(ADC_Handler *m);
 bool ADC_BusyCheck(void);
 
 #endif /* INC_ADC_MGR_H_ */

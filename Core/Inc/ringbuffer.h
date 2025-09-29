@@ -11,7 +11,7 @@
 #include "main.h"
 #include "string.h"
 
-#define RB_MAX_SIZE 255
+#define RB_MAX_SIZE 512
 
 typedef enum
 {

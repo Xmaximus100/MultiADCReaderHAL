@@ -50,7 +50,7 @@ AT_StatusTypeDef Cmd_ADC_SETUP(AT_CtxT *ctx, int argc, const char *argv[]){
 AT_StatusTypeDef Cmd_ADC_READ(AT_CtxT *ctx, int argc, const char *argv[]){
 	if (ADC_BusyCheck()) return AT_BUSY;
 	if (argc == 2) {
-
+		return AT_OK;
 	} else return AT_UNK;
 }
 
@@ -103,7 +103,7 @@ AT_StatusTypeDef Cmd_ADC_REFRESH(AT_CtxT *ctx, int argc, const char *argv[]){
 }
 
 void ADC_CommandInit(void){
-	AT_Register("ADC:SETUP", 	Cmd_ADC_SETUP, 	"Setup: number of samples, sampling frequency, number of converters");
+	AT_Register("ADC:SETUP", 	Cmd_ADC_SETUP, 	"Setup: number of samples (0 for continuous), sampling frequency, number of converters");
 	AT_Register("ADC:READ", 	Cmd_ADC_READ, 	"Set requested number of samples or type 0 for continuous mode");
 //	AT_Register("ADC:SAMPLING", Cmd_ADC_SAMPLING, help);
 	AT_Register("ADC:START", 	Cmd_ADC_START, 	"Start sampling");

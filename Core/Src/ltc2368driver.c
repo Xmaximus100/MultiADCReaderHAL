@@ -11,7 +11,7 @@
 LTC2368_StatusTypeDef LTC2368_Read(LTC2368_Handler *ltc2368_dev){
 	LTC2368_StatusTypeDef status = HAL_SPI_Receive(ltc2368_dev->spi_assinged->spi_handler, (uint8_t*)&ltc2368_dev->buf[ltc2368_dev->buf_ptr], 1, HAL_MAX_DELAY);
 	ltc2368_dev->buf_ptr = (ltc2368_dev->buf_ptr+1)%LTC2368_MAX_MEMORY;
-	if (ltc2368_dev->buf_ptr == ltc2368_dev->samples_requested) return LTC2368_DONE;
+	if (ltc2368_dev->buf_ptr == *ltc2368_dev->samples_requested) return LTC2368_DONE;
 	return status;
 }
 

@@ -366,7 +366,7 @@ void App_ADC_Init(void)
     AT_Init(USB_Write, NULL);
     ADC_CommandInit();
 
-    if (!ADC_Init(&g_adc, &htim4, TIM_CHANNEL_1, spi_handlers, busy_pins)) {
+    if (!ADC_Init(&g_adc, &htim4, TIM_CHANNEL_1, spi_handlers, busy_pins, USB_Write, NULL)) {
         Error_Handler();
     }
 }
