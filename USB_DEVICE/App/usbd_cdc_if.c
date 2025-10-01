@@ -154,14 +154,14 @@ USBD_CDC_ItfTypeDef USBD_Interface_fops_FS =
   */
 static int8_t CDC_Init_FS(void)
 {
-  /* USER CODE BEGIN 3 */
-  /* Set Application Buffers */
-  USBD_CDC_SetTxBuffer(&hUsbDeviceFS, UserTxBufferFS, 0);
-  USBD_CDC_SetRxBuffer(&hUsbDeviceFS, UserRxBufferFS);
-  RindBuffer_Init(&rb_tx);
-  RindBuffer_Init(&rb_rx);
-  return (USBD_OK);
-  /* USER CODE END 3 */
+	/* USER CODE BEGIN 3 */
+	/* Set Application Buffers */
+	USBD_CDC_SetTxBuffer(&hUsbDeviceFS, UserTxBufferFS, 0);
+	USBD_CDC_SetRxBuffer(&hUsbDeviceFS, UserRxBufferFS);
+	RindBuffer_Init(&rb_tx);
+	RindBuffer_Init(&rb_rx);
+	return (USBD_OK);
+	/* USER CODE END 3 */
 }
 
 /**
@@ -265,25 +265,19 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
   */
 static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 {
-  /* USER CODE BEGIN 6 */
+	/* USER CODE BEGIN 6 */
 	RingBuffer_WriteString(&rb_rx, (const char*)Buf, *Len);
 	data_collected = true;
-  USBD_CDC_SetRxBuffer(&hUsbDeviceFS, UserRxBufferFS);
-  USBD_CDC_ReceivePacket(&hUsbDeviceFS);
+	USBD_CDC_SetRxBuffer(&hUsbDeviceFS, UserRxBufferFS);
+	USBD_CDC_ReceivePacket(&hUsbDeviceFS);
 
-//  memset(usb_receive_buf, '\0', 64);  // 1) clear our application buffer
-//  uint8_t len = (uint8_t)*Len;        // 2) get the actual received length
-//  memcpy(usb_receive_buf, Buf, len);  // 3) copy data from USB buffer to our buffer
-//  memset(Buf, '\0', len);             // 4) clear the USB buffer too (prevents stale data)
+	//  memset(usb_receive_buf, '\0', 64);  // 1) clear our application buffer
+	//  uint8_t len = (uint8_t)*Len;        // 2) get the actual received length
+	//  memcpy(usb_receive_buf, Buf, len);  // 3) copy data from USB buffer to our buffer
+	//  memset(Buf, '\0', len);             // 4) clear the USB buffer too (prevents stale data)
 
-  return (USBD_OK);
-  /* USER CODE END 6 */
-}
-
-static inline uint8_t USB_EpCanTx(void){
-    USBD_CDC_HandleTypeDef *hcdc =
-        (USBD_CDC_HandleTypeDef*)hUsbDeviceFS.pClassData;
-    return (hcdc && hcdc->TxState == 0);
+	return (USBD_OK);
+	/* USER CODE END 6 */
 }
 
 /**
@@ -299,20 +293,31 @@ static inline uint8_t USB_EpCanTx(void){
   */
 uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
 {
-  uint8_t result = USBD_OK;
-  /* USER CODE BEGIN 7 */
-  USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef*)hUsbDeviceFS.pClassData;
-  if (hcdc->TxState != 0){
-    return USBD_BUSY;
-  }
-  USBD_CDC_SetTxBuffer(&hUsbDeviceFS, Buf, Len);
-  result = USBD_CDC_TransmitPacket(&hUsbDeviceFS);
-  successful_packets += 1;
-  /* USER CODE END 7 */
-  return result;
+	uint8_t result = USBD_OK;
+	/* USER CODE BEGIN 7 */
+	USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef*)hUsbDeviceFS.pClassData;
+	if (hcdc->TxState != 0){
+		return USBD_BUSY;
+	}
+	USBD_CDC_SetTxBuffer(&hUsbDeviceFS, Buf, Len);
+	result = USBD_CDC_TransmitPacket(&hUsbDeviceFS);
+	successful_packets += 1;
+	/* USER CODE END 7 */
+	return result;
 }
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_IMPLEMENTATION */
+static inline uint8_t USB_EpCanTx(void)
+{
+    // EP (Endpoint) gotowy do nadawania tylko, gdy urządzenie jest skonfigurowane
+    if (hUsbDeviceFS.dev_state != USBD_STATE_CONFIGURED) return 0u;
+
+    USBD_CDC_HandleTypeDef *hcdc =
+        (USBD_CDC_HandleTypeDef*)hUsbDeviceFS.pClassData;
+
+    // TxState == 0 => endpoint IN wolny
+    return (hcdc && hcdc->TxState == 0) ? 1u : 0u;
+}
 
 // Pompa TX: spróbuj wysłać kolejny blok z ringu
 void USB_TxPumpFromRing(RingBuffer *rb)

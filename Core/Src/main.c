@@ -341,7 +341,7 @@ void Change_TIM_Mode(void){
 
 AT_StatusTypeDef USB_Write(const char* buf, size_t len){
     size_t n = RingBuffer_WriteString(&rb_tx, buf, len);
-    // opcjonalnie: doraźnie szturchnij pompę (poza SOF)
+    //Poking TxPump to start transmission
     USB_TxPumpFromRing(&rb_tx);
     return (n == len) ? AT_OK : AT_ERROR;
 }
@@ -354,9 +354,9 @@ void App_ADC_Init(void)
     };
 
     GPIO_Assignment busy_pins[MAX_DEVICES] = {
-        { GPIOB, GPIO_PIN_15 },  // dev 0
-        { GPIOB, GPIO_PIN_4 },  // dev 1
-        { GPIOB, GPIO_PIN_7 },  // dev 2
+        { GPIOB, LTC1_BUSY_Pin },  // dev 0
+        { GPIOB, LTC2_BUSY_Pin },  // dev 1
+        { GPIOB, LTC3_BUSY_Pin },  // dev 2
     };
     for (uint8_t i = 3; i < MAX_DEVICES; ++i) {
         busy_pins[i].port = NULL;

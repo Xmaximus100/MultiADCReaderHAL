@@ -180,8 +180,6 @@ void HAL_PCD_SOFCallback(PCD_HandleTypeDef *hpcd)
 #endif /* USE_HAL_PCD_REGISTER_CALLBACKS */
 {
   USBD_LL_SOF((USBD_HandleTypeDef*)hpcd->pData);
-  USB_TxPumpFromRing(&rb_tx);
-//  HAL_GPIO_TogglePin(SOF_TICK_GPIO_Port, SOF_TICK_Pin);
 }
 
 /**

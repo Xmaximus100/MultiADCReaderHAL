@@ -10,7 +10,7 @@
 
 #include "main.h"
 
-#define LTC2368_MAX_MEMORY 1024
+#define LTC2368_MAX_MEMORY 2048 //2<<18 = 524288
 #define SYSTEM_FREQ 48000000
 #define MAX_SAMPLING_FREQ 500000
 
@@ -40,8 +40,8 @@ typedef struct LTC2368_Handler {
 	//GPIO_Assignment *cnv;
 	GPIO_Assignment *busy_pin;
 	uint16_t buf[LTC2368_MAX_MEMORY];
-	uint16_t buf_ptr;
-	uint16_t *samples_requested;
+	uint32_t buf_ptr;
+	uint32_t *samples_requested;
 	uint16_t *ready_to_disp;
 } LTC2368_Handler;
 

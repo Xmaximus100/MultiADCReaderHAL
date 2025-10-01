@@ -9,15 +9,18 @@
 
 
 LTC2368_StatusTypeDef LTC2368_Read(LTC2368_Handler *ltc2368_dev){
+	if (ltc2368_dev->buf_ptr == *ltc2368_dev->samples_requested) {
+		*ltc2368_dev->ready_to_disp |= 1<<ltc2368_dev->device_id;
+		return LTC2368_DONE;
+	}
 	LTC2368_StatusTypeDef status = HAL_SPI_Receive(ltc2368_dev->spi_assinged->spi_handler, (uint8_t*)&ltc2368_dev->buf[ltc2368_dev->buf_ptr], 1, HAL_MAX_DELAY);
-	ltc2368_dev->buf_ptr = (ltc2368_dev->buf_ptr+1)%LTC2368_MAX_MEMORY;
-	if (ltc2368_dev->buf_ptr == *ltc2368_dev->samples_requested) return LTC2368_DONE;
+	ltc2368_dev->buf_ptr = (ltc2368_dev->buf_ptr+1)&(LTC2368_MAX_MEMORY-1);
 	return status;
 }
 
 LTC2368_StatusTypeDef LTC2368_ConfigSampling(LTC2368_SamplingClock *sampling_conf, uint32_t frequency){
 
-	__HAL_TIM_DISABLE(sampling_conf->tim_master); //
+//	__HAL_TIM_DISABLE(sampling_conf->tim_master); //
 
 	uint32_t period = 1000;
 	uint32_t prescaler = 1;
@@ -41,7 +44,7 @@ LTC2368_StatusTypeDef LTC2368_ConfigSampling(LTC2368_SamplingClock *sampling_con
 		CLEAR_BIT(sampling_conf->tim_master->Instance->SR, TIM_FLAG_UPDATE);
 	}
 
-	__HAL_TIM_ENABLE(sampling_conf->tim_master); //
+//	__HAL_TIM_ENABLE(sampling_conf->tim_master); //
 	return LTC2368_OK;
 }
 

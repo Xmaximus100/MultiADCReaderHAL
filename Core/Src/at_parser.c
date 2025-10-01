@@ -52,7 +52,7 @@ static int Tokenize(char *cmd_line, char *argv[]){
 
 static AT_EntryT* FindCommand(const char *name){
 	for (uint16_t i=0; i<AT_Handler.ncmds; i++){
-		if (strcasecmp(name, AT_Handler.func_table[i].name)==0)
+		if (!strcasecmp(name, AT_Handler.func_table[i].name))
 			return &AT_Handler.func_table[i];
 	}
 	return NULL;
@@ -97,7 +97,7 @@ void AT_Puts(AT_CtxT *ctx, const char *s){
 bool AT_Register(const char *name, AT_CmdFunc cmd_func, const char *help){
 	if (!name || AT_Handler.ncmds > AT_MAX_CMDS) return false;
 	for (uint16_t i=0; i<AT_Handler.ncmds; i++){
-		if (strcasecmp(name, AT_Handler.func_table[i].name)==0) return false;
+		if (!strcasecmp(name, AT_Handler.func_table[i].name)) return false;
 	}
 	if (!AT_Handler.ncmds) AT_Handler.ncmds = 0;
 	AT_Handler.func_table[AT_Handler.ncmds++] = (AT_EntryT){ .name=name, .func=cmd_func, .help=help };

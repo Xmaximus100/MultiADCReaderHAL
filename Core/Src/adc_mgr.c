@@ -93,16 +93,18 @@ bool ADC_ManagerInit(ADC_Handler *m, uint8_t dev_amount){
 	return true;
 }
 
+static inline void ADC_ReportError(){
+	char buf[50];
+	size_t used = snprintf(buf, sizeof(buf), "ERROR OCCURED\r\n");
+	g_adc_mgr->display_func.write(buf, used);
+}
+
 void ADC_Acquire(ADC_Handler *m){
-//	for(uint8_t dev_nr=0; dev_nr<ADC_Handler.ndevs; dev_nr++){
-//		if (!ADC_Handler.ltc2368_devs[dev_nr].busy)
-//			  LTC2368_Read(&ADC_Handler.ltc2368_devs[dev_nr]);
-//	}
 	// We skim through ready_mask and operate on every id that has been reported
 	uint32_t ready = ADC_FetchReady(m);
 	for(int id=NextSetBit(&ready); id>=0; id=NextSetBit(&ready)){
 		LTC2368_Handler *dev = &m->ltc2368_devs[id];
-		if (dev->spi_assinged->spi_busy){
+		if (dev->spi_assinged->spi_busy==1){
 			// if SPI is busy, leave operation for next time
 			ADC_MarkReady(m, id);
 			continue;
@@ -113,8 +115,21 @@ void ADC_Acquire(ADC_Handler *m){
 			dev->spi_assinged->spi_busy = 0;
 			continue;
 		}
-		if ((m->ready_to_disp & m->ready_to_disp_mask) == m->ready_to_disp_mask){
-			ADC_DisplaySamples_Clear(m);
+		else if (LTC2368_Read(dev) == LTC2368_DONE){
+			dev->spi_assinged->spi_busy = 2;
+		}
+		if ((m->ready_to_disp & m->ready_to_disp_mask) != m->ready_to_disp_mask){
+			continue;
+		}
+		if (m->format == 0){
+			if (ADC_DisplaySamples_Raw(m, RESET_BUF, 0) == false){
+				ADC_ReportError();
+			}
+		}
+		else {
+			if (ADC_DisplaySamples_Clear(m, RESET_BUF, 0) == false){
+				ADC_ReportError();
+			}
 		}
 	}
 
@@ -125,61 +140,66 @@ static int ADC_Calculate_Output(int32_t sample){
 	return sample_voltage;  //assuming range is +/-10V and REF is internal 2,5V datasheet p.23
 }
 
-//static void ADC_Display(AT_CtxT *ctx, const char *s){
-//	if (!ctx || !ctx->write) return;
-//	size_t len = strlen(s);
-//	ctx->write(s, (uint16_t) len);
-//}
-
-bool ADC_DisplaySamples_Clear(ADC_Handler *m){
+bool ADC_DisplaySamples_Clear(ADC_Handler *m, bool reset_buf, uint32_t custom_samples_requested){
+	LTC2368_StopSampling(&m->clock_handler);
 	char buffer[256] = {0};
 	size_t used = 0;
 	int v;
-	used += snprintf(buffer+used, sizeof(buffer)-used, "Collected samples:%d\n\r", m->samples_requested);
+	uint32_t samples_requested;
+	if (custom_samples_requested == 0) samples_requested = m->samples_requested;
+	else samples_requested = custom_samples_requested;
+	used += snprintf(buffer+used, sizeof(buffer)-used, "Collected samples:%ld\r\n",samples_requested);
 //	m->display_func.write(s, (uint16_t) len);
 	for (uint8_t i=0; i<m->ndevs; i++){
 		used += snprintf(buffer+used, sizeof(buffer)-used, "CHANNEL%d", i);
+		if (reset_buf != 1) continue;
 		m->ltc2368_devs[i].buf_ptr = 0;
 	}
 	m->display_func.write(buffer, used);
 	used = 0;
-	for(uint32_t i=0; i<m->samples_requested; i++){
+	for(uint32_t i=0; i<samples_requested; i++){
 		for(uint8_t k=0; k<m->ndevs; k++){
 			v = ADC_Calculate_Output(m->ltc2368_devs[k].buf[i]);
-			used += snprintf(buffer+used, sizeof(buffer)-used, "%d.%dV", v/1000,abs(v%1000));
+			used += snprintf(buffer+used, sizeof(buffer)-used, "%d.%dV ", v/1000,abs(v%1000));
 		}
-		m->display_func.write(buffer, used);
+		used += snprintf(buffer+used, sizeof(buffer)-used, "\r\n");
+		if (m->display_func.write(buffer, used) != AT_OK) return false;
 		used = 0;
 	}
+	LTC2368_StartSampling(&m->clock_handler);
 	return true;
 }
 
-/* TODO
-bool ADC_DisplaySamples_Raw(ADC_Handler *m){
-	for (uint8_t i=0; i<m->ndevs; i++){
-		used += snprintf(buffer+used, sizeof(buffer-used), "CHANNEL%d", i);
-		m->ltc2368_devs[i].buf_ptr = 0;
-	}
-	for(uint32_t i=0; i<m->samples_requested; i++){
-		for(uint8_t k=0; k<m->ndevs; k++){
-			v = ADC_Calculate_Output(m->ltc2368_devs[k].buf_ptr[i]);
-			used += snprintf(buffer+used, sizeof(buffer-used), "%d.%dV", v/1000,abs(v%1000));
+bool ADC_DisplaySamples_Raw(ADC_Handler *m, bool reset_buf, uint32_t custom_samples_requested){
+	LTC2368_StopSampling(&m->clock_handler);
+	if (reset_buf == 1){
+		for (uint8_t i=0; i<m->ndevs; i++){
+			m->ltc2368_devs[i].buf_ptr = 0;
 		}
-		m->display_func.write(buffer, used);
-		used = 0;
 	}
-	uint8_t frame[11];
-	memcpy(frame, received_samples, 3); //first 2 bytes for sample index
-	memcpy(frame+3, &(ad7606b_data->data_buf[(ad7606b_data->data_ptr) % ad7606b_data->data_ptr_max]), 8); //bytes order frame[2] low_byte, frame[3] high_byte
-//	if ((received_samples-1)%10000 == 0) uint8_t tmp = 0;
-	HAL_UART_Transmit(huart, frame, 11, 1000);
+	uint32_t samples_requested;
+	if (custom_samples_requested == 0) samples_requested = m->samples_requested;
+	else samples_requested = custom_samples_requested;
+	uint8_t frame[2*m->ndevs];
+	for(uint32_t i=0; i<samples_requested; i++){
+		for(uint8_t k=0; k<m->ndevs; k++){
+			memcpy(frame+2*k, &(m->ltc2368_devs[k].buf[i]), 2); //2 bytes for each sample
+		}
+		if (m->display_func.write((char*)frame, 2*m->ndevs) != AT_OK) return false;
+	}
+	LTC2368_StartSampling(&m->clock_handler);
+	return true;
 }
-*/
 
 bool ADC_BusyCheck(void){
 	return g_adc.state;
 }
 
+/*
+ * Those functions I decided to leave as a placeholder for alternative changes in architecture
+ */
+
+/*
 bool ADC_StartSampling(void){
 	return true;
 }
@@ -187,3 +207,4 @@ bool ADC_StartSampling(void){
 bool ADC_StopSampling(void){
 	return true;
 }
+*/
